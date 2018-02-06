@@ -13,7 +13,7 @@ the [Supervisor][133]([Github][134]) init system overlayed on it.
 
 The image is tagged respectively for the following architectures,
 * **armhf**
-* **x86_64**
+* **x86_64** (retagged as the `latest` )
 
 **armhf** builds have embedded binfmt_misc support and contain the
 [qemu-user-static][105] binary that allows for running it also inside
