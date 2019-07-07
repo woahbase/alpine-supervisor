@@ -1,7 +1,7 @@
 # {{{ -- meta
 
-HOSTARCH  := x86_64# on travis.ci
-ARCH      := $(shell uname -m | sed "s_armv7l_armhf_")# armhf/x86_64 auto-detect on build and run
+HOSTARCH  := $(shell uname -m | sed "s_armv6l_armhf_")# x86_64# on travis.ci
+ARCH      := $(shell uname -m | sed "s_armv6l_armhf_")# armhf/x86_64 auto-detect on build and run
 OPSYS     := alpine
 SHCOMMAND := /bin/bash
 SVCNAME   := supervisor
@@ -13,14 +13,23 @@ IMAGETAG  := $(USERNAME)/$(DOCKEREPO):$(ARCH)
 
 CNTNAME   := $(SVCNAME) # name for container name : docker_name, hostname : name
 
+BUILD_NUMBER := 0#assigned in .travis.yml
+BRANCH       := master
+
 # -- }}}
 
 # {{{ -- flags
 
-BUILDFLAGS := --rm --force-rm --compress -f $(CURDIR)/Dockerfile_$(ARCH) -t $(IMAGETAG) \
-	--build-arg ARCH=$(ARCH) \
-	--build-arg DOCKERSRC=$(DOCKERSRC) \
-	--build-arg USERNAME=$(USERNAME) \
+BUILDFLAGS := --rm --force-rm --compress \
+	-f $(CURDIR)/Dockerfile_$(ARCH) \
+	-t $(IMAGETAG) \
+	--build-arg DOCKERSRC=$(USERNAME)/$(DOCKERSRC):$(ARCH) \
+	--build-arg http_proxy=$(http_proxy) \
+	--build-arg https_proxy=$(https_proxy) \
+	--build-arg no_proxy=$(no_proxy) \
+	--label online.woahbase.source-image=$(DOCKERSRC) \
+	--label online.woahbase.build-number=$(BUILD_NUMBER) \
+	--label online.woahbase.branch=$(BRANCH) \
 	--label org.label-schema.build-date=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ") \
 	--label org.label-schema.name=$(DOCKEREPO) \
 	--label org.label-schema.schema-version="1.0" \
@@ -35,9 +44,8 @@ MOUNTFLAGS := #
 NAMEFLAGS  := --name docker_$(CNTNAME) --hostname $(CNTNAME)
 OTHERFLAGS := # -v /etc/hosts:/etc/hosts:ro -v /etc/localtime:/etc/localtime:ro -e TZ=Asia/Kolkata
 PORTFLAGS  := #
-PROXYFLAGS := --build-arg http_proxy=$(http_proxy) --build-arg https_proxy=$(https_proxy) --build-arg no_proxy=$(no_proxy)
 
-RUNFLAGS   := -c 64 -m 32m # -e PGID=$(shell id -g) -e PUID=$(shell id -u)
+RUNFLAGS   := -c 64 -m 32m 
 
 # -- }}}
 
@@ -48,7 +56,7 @@ all : run
 build :
 	echo "Building for $(ARCH) from $(HOSTARCH)";
 	if [ "$(ARCH)" != "$(HOSTARCH)" ]; then make regbinfmt ; fi;
-	docker build $(BUILDFLAGS) $(CACHEFLAGS) $(PROXYFLAGS) .
+	docker build $(BUILDFLAGS) $(CACHEFLAGS) .
 
 clean :
 	docker images | awk '(NR>1) && ($$2!~/none/) {print $$1":"$$2}' | grep "$(USERNAME)/$(DOCKEREPO)" | xargs -n1 docker rmi
@@ -60,7 +68,7 @@ pull :
 	docker pull $(IMAGETAG)
 
 push :
-	docker push $(IMAGETAG); \
+	docker push $(IMAGETAG);
 	if [ "$(ARCH)" = "$(HOSTARCH)" ]; \
 		then \
 		LATESTTAG=$$(echo $(IMAGETAG) | sed 's/:$(ARCH)/:latest/'); \
@@ -71,16 +79,19 @@ push :
 restart :
 	docker ps -a | grep 'docker_$(CNTNAME)' -q && docker restart docker_$(CNTNAME) || echo "Service not running.";
 
-rm : stop
+rm :
 	docker rm -f docker_$(CNTNAME)
 
 run :
 	docker run --rm -it $(NAMEFLAGS) $(RUNFLAGS) $(PORTFLAGS) $(MOUNTFLAGS) $(OTHERFLAGS) $(IMAGETAG)
 
-rshell :
+shell :
+	docker run --rm -it $(NAMEFLAGS) $(RUNFLAGS) $(PORTFLAGS) $(MOUNTFLAGS) $(OTHERFLAGS) --entrypoint $(SHCOMMAND) $(IMAGETAG)
+
+rdebug :
 	docker exec -u root -it docker_$(CNTNAME) $(SHCOMMAND)
 
-shell :
+debug :
 	docker exec -it docker_$(CNTNAME) $(SHCOMMAND)
 
 stop :

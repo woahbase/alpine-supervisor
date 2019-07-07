@@ -1,8 +1,6 @@
-ARG ARCH=frommakefile
 ARG DOCKERSRC=frommakefile
-ARG USERNAME=frommakefile
 #
-FROM ${USERNAME}/${DOCKERSRC}:${ARCH}
+FROM ${DOCKERSRC}
 RUN set -xe && \
     apk add --no-cache --purge -uU supervisor inotify-tools && \
 	rm -rf /var/cache/apk/* /tmp/*
