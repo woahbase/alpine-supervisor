@@ -22,7 +22,7 @@ IMAGETAG  ?= $(REGISTRY)/$(ORGNAME)/$(REPONAME):$(ARCH)
 CNTNAME   := docker_$(SVCNAME)
 CNTSHELL  := /bin/bash
 
-VERSION   ?= $(call get_aports_version,supervisor)
+VERSION   ?= $(call get_svc_version)#$(call get_aports_version,supervisor)
 
 TESTCMD   := \
 	uname -a; \
@@ -40,7 +40,6 @@ LABELFLAGS ?= \
 	--label online.woahbase.branch=$(shell git rev-parse --abbrev-ref HEAD) \
 	--label online.woahbase.build-date=$(BUILDDATE) \
 	--label online.woahbase.build-number=$${BUILDNUMBER:-undefined} \
-	--label online.woahbase.supervisor-version=$(VERSION) \
 	--label online.woahbase.source-image="$(if $(filter scratch,$(SRCIMAGE)),scratch,$(OPSYS)-$(SRCIMAGE):$(if $(SRCTAG),$(SRCTAG),$(ARCH)))" \
 	--label org.opencontainers.image.base.name="$(if $(filter scratch,$(SRCIMAGE)),scratch,docker.io/$(ORGNAME)/$(OPSYS)-$(SRCIMAGE):$(if $(SRCTAG),$(SRCTAG),$(ARCH)))" \
 	--label org.opencontainers.image.created=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ") \
@@ -50,7 +49,7 @@ LABELFLAGS ?= \
 	--label org.opencontainers.image.title=$(REPONAME) \
 	--label org.opencontainers.image.url="$(if $(REGISTRY_URL),$(REGISTRY_URL),https://$(REGISTRY))/$(ORGNAME)/$(REPONAME)" \
 	--label org.opencontainers.image.vendor=$(ORGNAME) \
-	--label org.opencontainers.image.version=$(VERSION) \
+	--label org.opencontainers.image.version=tagged \
 	# --label org.opencontainers.image.authors="$(shell git config --get user.name)($(shell git config --get user.email))" \
 	#
 # all build-time flags combined here
@@ -58,7 +57,6 @@ BUILDFLAGS ?= \
 	$(CACHEFLAGS) \
 	$(LABELFLAGS) \
 	--build-arg IMAGEBASE=$(IMAGEBASE) \
-	--build-arg VERSION=$(if $(VERSION),$(VERSION),$(error VERSION is not defined)) \
 	--build-arg http_proxy=$(http_proxy) \
 	--build-arg https_proxy=$(https_proxy) \
 	--build-arg no_proxy=$(no_proxy) \
